@@ -85,7 +85,7 @@
   </div>
   <div id="feedback"></div>
   <div id="score">Score: 0<br><span id="percentage">0.00%</span></div>
-  <div id="timer">Time: 0s</div>
+  <div id="timer">Time: 00h 00m 00s</div>
   <div id="reset" onclick="resetGame()">🔄 Reset</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -120,7 +120,10 @@
     let timer = 0;
     let timerInterval = setInterval(() => {
       timer++;
-      document.getElementById("timer").textContent = `Time: ${timer}s`;
+      const h = String(Math.floor(timer / 3600)).padStart(2, '0');
+      const m = String(Math.floor((timer % 3600) / 60)).padStart(2, '0');
+      const s = String(timer % 60).padStart(2, '0');
+      document.getElementById("timer").textContent = `Time: ${h}h ${m}m ${s}s`;
     }, 1000);
 
     async function loadGeoJSON() {
@@ -173,7 +176,7 @@
         }
         feedback.textContent = "Correct";
       } else {
-        feedback.textContent = `❌ Wrong! It was ${currentAnswer}`;
+        feedback.textContent = `Incorrect`;
       }
 
       feedback.style.display = 'block';
@@ -186,7 +189,7 @@
       guessed.clear();
       timer = 0;
       document.getElementById("score").innerHTML = `Score: 0<br><span id='percentage'>0.00%</span>`;
-      document.getElementById("timer").textContent = `Time: 0s`;
+      document.getElementById("timer").textContent = `Time: 00h 00m 00s`;
       layerMap.forEach(layer => {
         layer.setStyle({ fillColor: 'white', fillOpacity: 1 });
       });
