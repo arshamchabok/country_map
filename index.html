@@ -73,6 +73,19 @@
       z-index: 1000;
       font-weight: bold;
     }
+    #leaderboard {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1000;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -87,6 +100,7 @@
   <div id="score">Score: 0<br><span id="percentage">0.00%</span></div>
   <div id="timer">Time: 00h 00m 00s</div>
   <div id="reset" onclick="resetGame()">🔄 Reset</div>
+  <div id="leaderboard"><strong>🏆 Leaderboard</strong><ul id="leaderboard-list"></ul></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -173,6 +187,11 @@
 
           const layer = layerMap.get(currentAnswer.toLowerCase());
           if (layer) layer.setStyle({ fillColor: '#000', fillOpacity: 1 });
+
+          if (score === countries.length) {
+            const timeText = document.getElementById("timer").textContent;
+            addToLeaderboard(timeText);
+          }
         }
         feedback.textContent = "Correct";
       } else {
@@ -182,6 +201,27 @@
       feedback.style.display = 'block';
       setTimeout(() => feedback.style.display = 'none', 3000);
       document.getElementById("quiz-box").style.display = "none";
+    }
+
+    function addToLeaderboard(timeText) {
+      const user = prompt("You got 100%! Enter your name for the leaderboard:");
+      if (!user) return;
+      const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+      leaderboard.push({ user, time: timeText });
+      leaderboard.sort((a, b) => a.time.localeCompare(b.time));
+      localStorage.setItem("leaderboard", JSON.stringify(leaderboard.slice(0, 10)));
+      renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
+      const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+      const list = document.getElementById("leaderboard-list");
+      list.innerHTML = "";
+      leaderboard.forEach(entry => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.user}: ${entry.time}`;
+        list.appendChild(li);
+      });
     }
 
     function resetGame() {
@@ -196,6 +236,7 @@
     }
 
     loadGeoJSON();
+    renderLeaderboard();
   </script>
 
   <script>
