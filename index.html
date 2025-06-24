@@ -1,97 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Border-Only Country Quiz</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.png" type="image/png">
-  <meta name="theme-color" content="#000000">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Map Quiz</title>
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 100vh; background: white; }
-    #quiz-box {
+    html, body, #map { margin: 0; padding: 0; height: 100%; background: white; }
+    #quiz-box, #login-box, #leaderboard-box, #feedback, #score, #reset, #timer, #region-box, #language-box {
       position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      z-index: 1000;
       background: white;
       padding: 10px;
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-      z-index: 1000;
-      display: none;
-    }
-    #quiz-box input {
-      width: 200px;
-      padding: 4px;
       font-size: 14px;
     }
-    #feedback {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.8);
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-weight: bold;
-      z-index: 1001;
-      display: none;
-    }
-    #score {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      font-weight: bold;
-    }
-    #reset {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: white;
-      padding: 6px 10px;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    #timer {
-      position: absolute;
-      top: 80px;
-      right: 10px;
-      background: white;
-      padding: 6px 10px;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      font-weight: bold;
-    }
-    #leaderboard {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      background: white;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      max-height: 200px;
-      overflow-y: auto;
-      font-size: 14px;
-    }
+    #quiz-box { top: 20px; left: 50%; transform: translateX(-50%); display: none; }
+    #feedback { bottom: 20px; left: 50%; transform: translateX(-50%); display: none; font-weight: bold; }
+    #score { top: 10px; right: 10px; font-weight: bold; }
+    #reset { top: 10px; left: 10px; cursor: pointer; font-weight: bold; }
+    #timer { top: 50px; right: 10px; font-weight: bold; }
+    #region-box { top: 90px; left: 10px; }
+    #language-box { top: 160px; left: 10px; }
+    #leaderboard-box { bottom: 10px; right: 10px; max-height: 200px; overflow-y: auto; display: none; background: #fff; padding: 8px; font-size: 12px; }
+    #login-box { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+    #login-box input { display: block; margin: 5px auto; padding: 5px; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div id="login-box">
+    <h3>Welcome to World Map Quiz</h3>
+    <input id="username" placeholder="Username" />
+    <input id="password" type="password" placeholder="Password" />
+    <button onclick="login()">Login / Signup</button>
+  </div>
   <div id="quiz-box">
-    <label for="guess">Which country is this?</label><br>
+    <label>Which country is this?</label><br>
     <input list="countries" id="guess" />
     <datalist id="countries"></datalist>
     <button onclick="checkAnswer()">Submit</button>
@@ -100,71 +47,71 @@
   <div id="score">Score: 0<br><span id="percentage">0.00%</span></div>
   <div id="timer">Time: 00h 00m 00s</div>
   <div id="reset" onclick="resetGame()">🔄 Reset</div>
-  <div id="leaderboard"><strong>🏆 Leaderboard</strong><ul id="leaderboard-list"></ul></div>
+  <div id="region-box">
+    <label>Region:</label>
+    <select id="regionFilter" onchange="filterRegion(this.value)">
+      <option value="All">All</option>
+      <option value="Africa">Africa</option>
+      <option value="Asia">Asia</option>
+      <option value="Europe">Europe</option>
+      <option value="Oceania">Oceania</option>
+      <option value="Americas">Americas</option>
+    </select>
+  </div>
+  <div id="language-box">
+    <label>Language:</label>
+    <select onchange="setLanguage(this.value)">
+      <option value="en">English</option>
+      <option value="fr">Français</option>
+      <option value="es">Español</option>
+    </select>
+  </div>
+  <div id="leaderboard-box"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map', {
-      center: [20, 0],
-      zoom: 2,
-      zoomControl: false,
-      attributionControl: false
-    });
-
-    const blueBackground = L.tileLayer('', {
-      minZoom: 0,
-      maxZoom: 18,
-      tileSize: 256,
-      noWrap: true,
-      bounds: [[-90, -180], [90, 180]]
-    });
-
+    const map = L.map('map', { center: [20, 0], zoom: 2, zoomControl: false, attributionControl: false });
+    const blueBackground = L.tileLayer('', { minZoom: 0, maxZoom: 18, tileSize: 256, noWrap: true, bounds: [[-90, -180], [90, 180]] });
     blueBackground.createTile = function () {
-      const tile = document.createElement('canvas');
-      tile.width = tile.height = 256;
-      const ctx = tile.getContext('2d');
-      ctx.fillStyle = '#a0d8f1';
-      ctx.fillRect(0, 0, 256, 256);
-      return tile;
-    };
-    blueBackground.addTo(map);
+      const tile = document.createElement('canvas'); tile.width = tile.height = 256;
+      const ctx = tile.getContext('2d'); ctx.fillStyle = '#a0d8f1'; ctx.fillRect(0, 0, 256, 256); return tile;
+    }; blueBackground.addTo(map);
 
-    let countries = [], currentAnswer = '', score = 0, guessed = new Set();
-    let layerMap = new Map();
-    let timer = 0;
-    let timerInterval = setInterval(() => {
-      timer++;
-      const h = String(Math.floor(timer / 3600)).padStart(2, '0');
-      const m = String(Math.floor((timer % 3600) / 60)).padStart(2, '0');
-      const s = String(timer % 60).padStart(2, '0');
-      document.getElementById("timer").textContent = `Time: ${h}h ${m}m ${s}s`;
-    }, 1000);
+    let countries = [], currentAnswer = '', score = 0, guessed = new Set(), timer = 0, user = null;
+    let layerMap = new Map(); let timerInterval;
+
+    function formatTime(s) {
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      return `${h}h ${m}m ${sec}s`;
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timer++;
+        document.getElementById("timer").textContent = `Time: ${formatTime(timer)}`;
+      }, 1000);
+    }
 
     async function loadGeoJSON() {
       const res = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
       const data = await res.json();
       countries = data.features;
-
       const nameList = countries.map(f => f.properties.name).sort();
       const datalist = document.getElementById('countries');
       datalist.innerHTML = '';
       nameList.forEach(name => {
         const opt = document.createElement('option');
-        opt.value = name;
-        datalist.appendChild(opt);
+        opt.value = name; datalist.appendChild(opt);
       });
 
       L.geoJSON(data, {
-        style: feature => ({
-          color: "#000",
-          weight: 1,
-          fillOpacity: 1,
-          fillColor: 'white'
-        }),
+        style: feature => ({ color: "#000", weight: 1, fillOpacity: 1, fillColor: 'white' }),
         onEachFeature: (feature, layer) => {
           const countryName = feature.properties.name;
           layerMap.set(countryName.toLowerCase(), layer);
-
           layer.on('click', () => {
             currentAnswer = countryName;
             document.getElementById("quiz-box").style.display = "block";
@@ -177,51 +124,38 @@
     function checkAnswer() {
       const guess = document.getElementById("guess").value.trim();
       const feedback = document.getElementById("feedback");
-
       if (guess.toLowerCase() === currentAnswer.toLowerCase()) {
         if (!guessed.has(currentAnswer.toLowerCase())) {
           score++;
           guessed.add(currentAnswer.toLowerCase());
           const percent = (score / countries.length * 100).toFixed(2);
           document.getElementById("score").innerHTML = `Score: ${score}<br><span id='percentage'>${percent}%</span>`;
-
           const layer = layerMap.get(currentAnswer.toLowerCase());
           if (layer) layer.setStyle({ fillColor: '#000', fillOpacity: 1 });
-
-          if (score === countries.length) {
-            const timeText = document.getElementById("timer").textContent;
-            addToLeaderboard(timeText);
-          }
         }
         feedback.textContent = "Correct";
       } else {
         feedback.textContent = `Incorrect`;
       }
-
       feedback.style.display = 'block';
       setTimeout(() => feedback.style.display = 'none', 3000);
       document.getElementById("quiz-box").style.display = "none";
+
+      if (score === countries.length) {
+        const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+        leaderboard.push({ user, time: timer });
+        leaderboard.sort((a, b) => a.time - b.time);
+        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+        showLeaderboard();
+      }
     }
 
-    function addToLeaderboard(timeText) {
-      const user = prompt("You got 100%! Enter your name for the leaderboard:");
-      if (!user) return;
-      const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-      leaderboard.push({ user, time: timeText });
-      leaderboard.sort((a, b) => a.time.localeCompare(b.time));
-      localStorage.setItem("leaderboard", JSON.stringify(leaderboard.slice(0, 10)));
-      renderLeaderboard();
-    }
-
-    function renderLeaderboard() {
-      const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-      const list = document.getElementById("leaderboard-list");
-      list.innerHTML = "";
-      leaderboard.forEach(entry => {
-        const li = document.createElement("li");
-        li.textContent = `${entry.user}: ${entry.time}`;
-        list.appendChild(li);
-      });
+    function showLeaderboard() {
+      const box = document.getElementById("leaderboard-box");
+      const data = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+      box.innerHTML = '<strong>🏆 Leaderboard</strong><br>' +
+        data.map((entry, i) => `${i + 1}. ${entry.user}: ${formatTime(entry.time)}`).join('<br>');
+      box.style.display = 'block';
     }
 
     function resetGame() {
@@ -230,20 +164,29 @@
       timer = 0;
       document.getElementById("score").innerHTML = `Score: 0<br><span id='percentage'>0.00%</span>`;
       document.getElementById("timer").textContent = `Time: 00h 00m 00s`;
-      layerMap.forEach(layer => {
-        layer.setStyle({ fillColor: 'white', fillOpacity: 1 });
-      });
+      layerMap.forEach(layer => layer.setStyle({ fillColor: 'white', fillOpacity: 1 }));
+      document.getElementById("leaderboard-box").style.display = 'none';
+    }
+
+    function login() {
+      const u = document.getElementById("username").value.trim();
+      const p = document.getElementById("password").value.trim();
+      if (u && p) {
+        user = u;
+        document.getElementById("login-box").style.display = "none";
+        startTimer();
+      }
+    }
+
+    function filterRegion(region) {
+      // To implement filtering logic if needed
+    }
+
+    function setLanguage(lang) {
+      alert("Language change not implemented yet. Selected: " + lang);
     }
 
     loadGeoJSON();
-    renderLeaderboard();
-  </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('Service Worker registered'));
-    }
   </script>
 </body>
 </html>
