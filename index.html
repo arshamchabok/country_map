@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>World Map Quiz</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Quiz</title>
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     html, body, #map { margin: 0; padding: 0; height: 100%; background: white; }
-    #quiz-box, #feedback, #score, #reset, #timer, #leaderboard-box {
+    #quiz-box, #feedback, #score, #reset, #timer, #leaderboard-box, #menu-box {
       position: absolute;
       z-index: 1000;
       background: white;
@@ -19,14 +19,36 @@
     }
     #quiz-box { top: 20px; left: 50%; transform: translateX(-50%); display: none; }
     #feedback { bottom: 20px; left: 50%; transform: translateX(-50%); display: none; font-weight: bold; }
-    #score { top: 10px; right: 10px; font-weight: bold; }
-    #reset { top: 10px; left: 10px; cursor: pointer; font-weight: bold; }
-    #timer { top: 100px; right: 10px; font-weight: bold; }
-    #leaderboard-box { bottom: 10px; right: 10px; max-height: 200px; overflow-y: auto; }
+    #score { top: 10px; right: 10px; font-weight: bold; display: none; }
+    #reset { top: 10px; left: 10px; cursor: pointer; font-weight: bold; display: none; }
+    #timer { top: 100px; right: 10px; font-weight: bold; display: none; }
+    #leaderboard-box { bottom: 10px; right: 10px; max-height: 200px; overflow-y: auto; display: none; }
+    #menu-box {
+      top: 20%; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center;
+    }
+    #username {
+      margin-bottom: 15px; padding: 8px 12px; font-size: 16px;
+      border: 1px solid #ccc; border-radius: 6px;
+    }
+    .game-button {
+      margin: 10px; padding: 12px 24px; font-size: 16px;
+      background-color: #007bff; color: white;
+      border: none; border-radius: 6px;
+      cursor: pointer; width: 220px; text-align: center;
+    }
+    .game-button:hover { background-color: #0056b3; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+
+  <div id="menu-box">
+    <h2>World Geography Quiz</h2>
+    <input id="username" placeholder="Enter your username" />
+    <button class="game-button" onclick="startGame()">🌍 Start Country Borders</button>
+  </div>
+
   <div id="quiz-box">
     <label>Which country is this?</label><br>
     <input list="countries" id="guess" />
@@ -49,13 +71,9 @@
     });
 
     const blueBackground = L.tileLayer('', {
-      minZoom: 0,
-      maxZoom: 18,
-      tileSize: 256,
-      noWrap: true,
+      minZoom: 0, maxZoom: 18, tileSize: 256, noWrap: true,
       bounds: [[-90, -180], [90, 180]]
     });
-
     blueBackground.createTile = function () {
       const tile = document.createElement('canvas');
       tile.width = tile.height = 256;
@@ -66,17 +84,11 @@
     };
     blueBackground.addTo(map);
 
-    let countries = [], currentAnswer = '', score = 0, guessed = new Set(), startTime = Date.now();
+    let countries = [], currentAnswer = '', score = 0, guessed = new Set(), startTime;
     let layerMap = new Map();
 
     const timerEl = document.getElementById("timer");
-    setInterval(() => {
-      const diff = Math.floor((Date.now() - startTime) / 1000);
-      const h = String(Math.floor(diff / 3600)).padStart(2, '0');
-      const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-      const s = String(diff % 60).padStart(2, '0');
-      timerEl.textContent = `Time: ${h}h ${m}m ${s}s`;
-    }, 1000);
+    let timerInterval;
 
     async function loadGeoJSON() {
       const res = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
@@ -93,16 +105,10 @@
       });
 
       L.geoJSON(data, {
-        style: feature => ({
-          color: "#000",
-          weight: 1,
-          fillOpacity: 1,
-          fillColor: 'white'
-        }),
+        style: feature => ({ color: "#000", weight: 1, fillOpacity: 1, fillColor: 'white' }),
         onEachFeature: (feature, layer) => {
           const countryName = feature.properties.name;
           layerMap.set(countryName.toLowerCase(), layer);
-
           layer.on('click', () => {
             currentAnswer = countryName;
             document.getElementById("quiz-box").style.display = "block";
@@ -122,21 +128,18 @@
           guessed.add(currentAnswer.toLowerCase());
           const percent = (score / countries.length * 100).toFixed(2);
           document.getElementById("score").innerHTML = `Score: ${score}<br><span id='percentage'>${percent}%</span>`;
-
           const layer = layerMap.get(currentAnswer.toLowerCase());
           if (layer) layer.setStyle({ fillColor: '#000', fillOpacity: 1 });
 
           if (score === countries.length) {
             const totalTime = Math.floor((Date.now() - startTime) / 1000);
-            const username = prompt("Enter name for leaderboard:", "Guest");
-            if (username) {
-              const entry = { user: username, time: totalTime };
-              const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-              leaderboard.push(entry);
-              leaderboard.sort((a, b) => a.time - b.time);
-              localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-              showLeaderboard();
-            }
+            const username = localStorage.getItem("username") || "Guest";
+            const entry = { user: username, time: totalTime };
+            const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+            leaderboard.push(entry);
+            leaderboard.sort((a, b) => a.time - b.time);
+            localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+            showLeaderboard();
           }
         }
         feedback.textContent = "Correct";
@@ -149,15 +152,32 @@
       document.getElementById("quiz-box").style.display = "none";
     }
 
+    function startGame() {
+      const username = document.getElementById("username").value.trim();
+      if (!username) return alert("Please enter a username to start.");
+      localStorage.setItem("username", username);
+      document.getElementById("menu-box").style.display = "none";
+      document.getElementById("score").style.display = "block";
+      document.getElementById("reset").style.display = "block";
+      document.getElementById("timer").style.display = "block";
+      document.getElementById("leaderboard-box").style.display = "block";
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const diff = Math.floor((Date.now() - startTime) / 1000);
+        const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+        const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+        const s = String(diff % 60).padStart(2, '0');
+        timerEl.textContent = `Time: ${h}h ${m}m ${s}s`;
+      }, 1000);
+    }
+
     function resetGame() {
       score = 0;
       guessed.clear();
       startTime = Date.now();
       document.getElementById("score").innerHTML = `Score: 0<br><span id='percentage'>0.00%</span>`;
       document.getElementById("timer").textContent = `Time: 00h 00m 00s`;
-      layerMap.forEach(layer => {
-        layer.setStyle({ fillColor: 'white', fillOpacity: 1 });
-      });
+      layerMap.forEach(layer => layer.setStyle({ fillColor: 'white', fillOpacity: 1 }));
     }
 
     function showLeaderboard() {
