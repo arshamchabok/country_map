@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>World Quiz</title>
-  <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="icon" href="icon.png" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body {
       margin: 0;
@@ -18,7 +18,7 @@
       height: 100%;
       display: none;
     }
-    #quiz-box, #feedback, #score, #reset, #timer, #leaderboard-box, #menu-box {
+    #quiz-box, #feedback, #score, #reset, #timer, #leaderboard-box, #menu-box, #back-menu {
       position: absolute;
       z-index: 1000;
       background: white;
@@ -61,6 +61,14 @@
       text-align: center;
     }
     .game-button:hover { background-color: #0056b3; }
+
+    #back-menu {
+      top: 50px;
+      left: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -82,6 +90,7 @@
   <div id="score">Score: 0<br><span id='percentage'>0.00%</span></div>
   <div id="timer">Time: 00h 00m 00s</div>
   <div id="reset" onclick="resetGame()">🔄 Reset</div>
+  <div id="back-menu" onclick="returnToMenu()">🔙 Back to Menu</div>
   <div id="leaderboard-box"><h4>🏆 Leaderboard</h4><ul id="leaderboard"></ul></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -164,6 +173,7 @@
       document.getElementById("reset").style.display = "block";
       document.getElementById("timer").style.display = "block";
       document.getElementById("leaderboard-box").style.display = "block";
+      document.getElementById("back-menu").style.display = "block";
 
       map = L.map('map', {
         center: [20, 0],
@@ -176,7 +186,6 @@
         minZoom: 0, maxZoom: 18, tileSize: 256, noWrap: true,
         bounds: [[-90, -180], [90, 180]]
       });
-
       blueBackground.createTile = function () {
         const tile = document.createElement('canvas');
         tile.width = tile.height = 256;
@@ -206,6 +215,22 @@
       document.getElementById("score").innerHTML = `Score: 0<br><span id='percentage'>0.00%</span>`;
       document.getElementById("timer").textContent = `Time: 00h 00m 00s`;
       layerMap.forEach(layer => layer.setStyle({ fillColor: 'white', fillOpacity: 1 }));
+    }
+
+    function returnToMenu() {
+      clearInterval(timerInterval);
+      if (map) {
+        map.remove();
+        map = null;
+      }
+      document.getElementById("map").style.display = "none";
+      document.getElementById("score").style.display = "none";
+      document.getElementById("reset").style.display = "none";
+      document.getElementById("timer").style.display = "none";
+      document.getElementById("leaderboard-box").style.display = "none";
+      document.getElementById("quiz-box").style.display = "none";
+      document.getElementById("back-menu").style.display = "none";
+      document.getElementById("menu-box").style.display = "flex";
     }
 
     function showLeaderboard() {
