@@ -182,7 +182,7 @@
             document.getElementById("guess").value = "";
             document.getElementById("question-label").textContent = currentMode === 'borders'
               ? "Which country is this?"
-              : `What is the capital of ${countryName}?`;
+              : What is the capital of ${countryName}?;
           });
         }
       }).addTo(map);
@@ -196,7 +196,7 @@
           score++;
           guessed.add(currentAnswer.toLowerCase());
           const percent = (score / countries.length * 100).toFixed(2);
-          document.getElementById("score").innerHTML = `Score: ${score}<br><span id='percentage'>${percent}%</span>`;
+          document.getElementById("score").innerHTML = Score: ${score}<br><span id='percentage'>${percent}%</span>;
           for (const [name, layer] of layerMap.entries()) {
   const countryName = name.toLowerCase();
   const capital = capitalData[Object.keys(capitalData).find(k => k.toLowerCase() === countryName)];
@@ -268,7 +268,7 @@
         const h = String(Math.floor(diff / 3600)).padStart(2, '0');
         const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
         const s = String(diff % 60).padStart(2, '0');
-        timerEl.textContent = `Time: ${h}h ${m}m ${s}s`;
+        timerEl.textContent = Time: ${h}h ${m}m ${s}s;
       }, 1000);
 
       loadGeoJSON();
@@ -278,8 +278,8 @@
       score = 0;
       guessed.clear();
       startTime = Date.now();
-      document.getElementById("score").innerHTML = `Score: 0<br><span id='percentage'>0.00%</span>`;
-      document.getElementById("timer").textContent = `Time: 00h 00m 00s`;
+      document.getElementById("score").innerHTML = Score: 0<br><span id='percentage'>0.00%</span>;
+      document.getElementById("timer").textContent = Time: 00h 00m 00s;
       layerMap.forEach(layer => layer.setStyle({ fillColor: 'white', fillOpacity: 1 }));
     }
 
