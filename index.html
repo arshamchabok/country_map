@@ -95,24 +95,15 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    let map, mode;
-    let countries = [], currentAnswer = '', score = 0, guessed = new Set(), startTime;
+    let map, mode = 'borders', countries = [], capitals = {}, currentAnswer = '', score = 0, guessed = new Set(), startTime;
     let layerMap = new Map();
     let timerInterval;
     const timerEl = document.getElementById("timer");
 
-    const capitalMap = {
-      "Canada": "Ottawa",
-      "France": "Paris",
-      "Germany": "Berlin",
-      "Brazil": "Brasília",
-      "India": "New Delhi",
-      "Japan": "Tokyo",
-      "China": "Beijing",
-      "United States": "Washington, D.C.",
-      "United Kingdom": "London",
-      // Add more countries as needed
-    };
+    async function loadCapitalData() {
+      const res = await fetch('https://country.io/capital.json');
+      capitals = await res.json();
+    }
 
     async function loadGeoJSON() {
       const res = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
@@ -121,27 +112,26 @@
 
       const datalist = document.getElementById('answers');
       datalist.innerHTML = '';
-
-      let nameList = (mode === 'borders')
-        ? countries.map(f => f.properties.name)
-        : countries.map(f => capitalMap[f.properties.name] || '');
-      nameList = nameList.filter(Boolean).sort();
-
-      nameList.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        datalist.appendChild(opt);
+      countries.forEach(f => {
+        const name = f.properties.name;
+        const value = mode === 'borders' ? name : capitals[name] || null;
+        if (value) {
+          const opt = document.createElement('option');
+          opt.value = value;
+          datalist.appendChild(opt);
+        }
       });
 
       L.geoJSON(data, {
         style: feature => ({ color: "#000", weight: 1, fillOpacity: 1, fillColor: 'white' }),
         onEachFeature: (feature, layer) => {
           const name = feature.properties.name;
+          const answerValue = mode === 'borders' ? name : capitals[name] || null;
           layerMap.set(name.toLowerCase(), layer);
           layer.on('click', () => {
-            currentAnswer = name;
-            document.getElementById("question-label").textContent =
-              (mode === 'borders') ? "Which country is this?" : "What is the capital of this country?";
+            if (!answerValue) return;
+            currentAnswer = answerValue;
+            document.getElementById("question-label").textContent = mode === 'borders' ? "Which country is this?" : "What is the capital of this country?";
             document.getElementById("quiz-box").style.display = "block";
             document.getElementById("guess").value = "";
           });
@@ -152,43 +142,36 @@
     function checkAnswer() {
       const guess = document.getElementById("guess").value.trim();
       const feedback = document.getElementById("feedback");
-      const correct = (mode === 'borders') ? currentAnswer : capitalMap[currentAnswer] || '';
 
-      if (guess.toLowerCase() === correct.toLowerCase()) {
+      if (guess.toLowerCase() === currentAnswer.toLowerCase()) {
         if (!guessed.has(currentAnswer.toLowerCase())) {
           score++;
           guessed.add(currentAnswer.toLowerCase());
           const percent = (score / countries.length * 100).toFixed(2);
           document.getElementById("score").innerHTML = `Score: ${score}<br><span id='percentage'>${percent}%</span>`;
-          const layer = layerMap.get(currentAnswer.toLowerCase());
-          if (layer) layer.setStyle({ fillColor: '#000', fillOpacity: 1 });
-
-          if (score === countries.length) {
-            const totalTime = Math.floor((Date.now() - startTime) / 1000);
-            const username = localStorage.getItem("username") || "Guest";
-            const entry = { user: username, time: totalTime, mode: mode };
-            const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-            leaderboard.push(entry);
-            leaderboard.sort((a, b) => a.time - b.time);
-            localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-            showLeaderboard();
+          for (let [key, layer] of layerMap.entries()) {
+            const expected = mode === 'borders' ? key : capitals[key] || '';
+            if (expected.toLowerCase() === currentAnswer.toLowerCase()) {
+              layer.setStyle({ fillColor: '#000', fillOpacity: 1 });
+              break;
+            }
           }
         }
         feedback.textContent = "Correct";
       } else {
         feedback.textContent = `Incorrect`;
       }
-
       feedback.style.display = 'block';
       setTimeout(() => feedback.style.display = 'none', 3000);
       document.getElementById("quiz-box").style.display = "none";
     }
 
-    function startGame(selectedMode) {
+    async function startGame(selectedMode) {
       mode = selectedMode;
       const username = document.getElementById("username").value.trim();
       if (!username) return alert("Please enter a username to start.");
       localStorage.setItem("username", username);
+
       document.getElementById("menu-box").style.display = "none";
       document.getElementById("map").style.display = "block";
       document.getElementById("score").style.display = "block";
@@ -197,13 +180,14 @@
       document.getElementById("leaderboard-box").style.display = "block";
       document.getElementById("back-menu").style.display = "block";
 
+      if (mode === 'capitals') await loadCapitalData();
+
       map = L.map('map', {
         center: [20, 0],
         zoom: 2,
         zoomControl: false,
         attributionControl: false
       });
-
       const blueBackground = L.tileLayer('', {
         minZoom: 0, maxZoom: 18, tileSize: 256, noWrap: true,
         bounds: [[-90, -180], [90, 180]]
@@ -217,7 +201,6 @@
         return tile;
       };
       blueBackground.addTo(map);
-
       startTime = Date.now();
       timerInterval = setInterval(() => {
         const diff = Math.floor((Date.now() - startTime) / 1000);
@@ -226,8 +209,7 @@
         const s = String(diff % 60).padStart(2, '0');
         timerEl.textContent = `Time: ${h}h ${m}m ${s}s`;
       }, 1000);
-
-      loadGeoJSON();
+      await loadGeoJSON();
     }
 
     function resetGame() {
@@ -258,8 +240,7 @@
     function showLeaderboard() {
       const list = document.getElementById("leaderboard");
       const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-      const filtered = leaderboard.filter(e => e.mode === mode);
-      list.innerHTML = filtered.slice(0, 10).map(e => `<li>${e.user}: ${e.time}s</li>`).join('');
+      list.innerHTML = leaderboard.slice(0, 10).map(e => `<li>${e.user}: ${e.time}s</li>`).join('');
     }
 
     showLeaderboard();
