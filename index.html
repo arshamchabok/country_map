@@ -61,7 +61,6 @@
       text-align: center;
     }
     .game-button:hover { background-color: #0056b3; }
-
     #back-menu {
       top: 50px;
       left: 10px;
@@ -75,15 +74,16 @@
   <div id="menu-box">
     <h2>World Geography Quiz</h2>
     <input id="username" placeholder="Enter your username" />
-    <button class="game-button" onclick="startGame()">🌍 Start Country Borders</button>
+    <button class="game-button" onclick="startGame('borders')">🌍 Country Borders</button>
+    <button class="game-button" onclick="startGame('capitals')">🏙️ Country Capitals</button>
   </div>
 
   <div id="map"></div>
 
   <div id="quiz-box">
-    <label>Which country is this?</label><br>
-    <input list="countries" id="guess" />
-    <datalist id="countries"></datalist>
+    <label id="question-label">Which country is this?</label><br>
+    <input list="answers" id="guess" />
+    <datalist id="answers"></datalist>
     <button onclick="checkAnswer()">Submit</button>
   </div>
   <div id="feedback"></div>
@@ -95,20 +95,38 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    let map;
+    let map, mode;
     let countries = [], currentAnswer = '', score = 0, guessed = new Set(), startTime;
     let layerMap = new Map();
     let timerInterval;
     const timerEl = document.getElementById("timer");
+
+    const capitalMap = {
+      "Canada": "Ottawa",
+      "France": "Paris",
+      "Germany": "Berlin",
+      "Brazil": "Brasília",
+      "India": "New Delhi",
+      "Japan": "Tokyo",
+      "China": "Beijing",
+      "United States": "Washington, D.C.",
+      "United Kingdom": "London",
+      // Add more countries as needed
+    };
 
     async function loadGeoJSON() {
       const res = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
       const data = await res.json();
       countries = data.features;
 
-      const nameList = countries.map(f => f.properties.name).sort();
-      const datalist = document.getElementById('countries');
+      const datalist = document.getElementById('answers');
       datalist.innerHTML = '';
+
+      let nameList = (mode === 'borders')
+        ? countries.map(f => f.properties.name)
+        : countries.map(f => capitalMap[f.properties.name] || '');
+      nameList = nameList.filter(Boolean).sort();
+
       nameList.forEach(name => {
         const opt = document.createElement('option');
         opt.value = name;
@@ -118,10 +136,12 @@
       L.geoJSON(data, {
         style: feature => ({ color: "#000", weight: 1, fillOpacity: 1, fillColor: 'white' }),
         onEachFeature: (feature, layer) => {
-          const countryName = feature.properties.name;
-          layerMap.set(countryName.toLowerCase(), layer);
+          const name = feature.properties.name;
+          layerMap.set(name.toLowerCase(), layer);
           layer.on('click', () => {
-            currentAnswer = countryName;
+            currentAnswer = name;
+            document.getElementById("question-label").textContent =
+              (mode === 'borders') ? "Which country is this?" : "What is the capital of this country?";
             document.getElementById("quiz-box").style.display = "block";
             document.getElementById("guess").value = "";
           });
@@ -132,8 +152,9 @@
     function checkAnswer() {
       const guess = document.getElementById("guess").value.trim();
       const feedback = document.getElementById("feedback");
+      const correct = (mode === 'borders') ? currentAnswer : capitalMap[currentAnswer] || '';
 
-      if (guess.toLowerCase() === currentAnswer.toLowerCase()) {
+      if (guess.toLowerCase() === correct.toLowerCase()) {
         if (!guessed.has(currentAnswer.toLowerCase())) {
           score++;
           guessed.add(currentAnswer.toLowerCase());
@@ -145,7 +166,7 @@
           if (score === countries.length) {
             const totalTime = Math.floor((Date.now() - startTime) / 1000);
             const username = localStorage.getItem("username") || "Guest";
-            const entry = { user: username, time: totalTime };
+            const entry = { user: username, time: totalTime, mode: mode };
             const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
             leaderboard.push(entry);
             leaderboard.sort((a, b) => a.time - b.time);
@@ -163,7 +184,8 @@
       document.getElementById("quiz-box").style.display = "none";
     }
 
-    function startGame() {
+    function startGame(selectedMode) {
+      mode = selectedMode;
       const username = document.getElementById("username").value.trim();
       if (!username) return alert("Please enter a username to start.");
       localStorage.setItem("username", username);
@@ -236,7 +258,8 @@
     function showLeaderboard() {
       const list = document.getElementById("leaderboard");
       const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-      list.innerHTML = leaderboard.slice(0, 10).map(e => `<li>${e.user}: ${e.time}s</li>`).join('');
+      const filtered = leaderboard.filter(e => e.mode === mode);
+      list.innerHTML = filtered.slice(0, 10).map(e => `<li>${e.user}: ${e.time}s</li>`).join('');
     }
 
     showLeaderboard();
