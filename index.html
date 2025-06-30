@@ -198,8 +198,17 @@
           const percent = (score / countries.length * 100).toFixed(2);
           document.getElementById("score").innerHTML = `Score: ${score}<br><span id='percentage'>${percent}%</span>`;
           for (const [name, layer] of layerMap.entries()) {
-            if ((currentMode === 'borders' && name === currentAnswer.toLowerCase()) ||
-                (currentMode === 'capitals' && capitalData[name] && capitalData[name].toLowerCase() === currentAnswer.toLowerCase())) {
+            if (
+  (currentMode === 'borders' && name === currentAnswer.toLowerCase()) ||
+  (currentMode === 'capitals' &&
+   capitalData[name.charAt(0).toUpperCase() + name.slice(1)] &&
+   capitalData[name.charAt(0).toUpperCase() + name.slice(1)].toLowerCase() === currentAnswer.toLowerCase()
+  )
+) {
+  layer.setStyle({ fillColor: '#000', fillOpacity: 1 });
+  break;
+}
+
               layer.setStyle({ fillColor: '#000', fillOpacity: 1 });
               break;
             }
